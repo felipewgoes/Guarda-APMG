@@ -16,7 +16,7 @@ export const BrazilianPlateBadge: React.FC<BrazilianPlateBadgeProps> = ({
 }) => {
   const cleanPlate = (plate || '').toUpperCase().trim();
   const isMilitar = cleanPlate.startsWith('EB') || cleanPlate.startsWith('FAB') || cleanPlate.startsWith('MB') || format === 'outro';
-  const isAntiga = format === 'antiga' || (/^[A-Z]{3}[0-9]{4}$/.test(cleanPlate.replace('-', '')));
+  const isAntiga = format === 'antiga' || format === 'ANTIGO_BRASIL' || (/^[A-Z]{3}[0-9]{4}$/.test(cleanPlate.replace('-', '')));
 
   // Size configurations
   const sizeStyles = {

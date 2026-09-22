@@ -118,7 +118,12 @@ export const HistoryExportView: React.FC<HistoryExportViewProps> = ({
         'Data da Entrada': entry.entryDateFormatted,
         'Horário Exato': entry.entryTimeFormatted,
         'Placa do Veículo': entry.plate,
-        'Padrão da Placa': entry.plateFormat.toUpperCase(),
+        'Padrão da Placa':
+          entry.fontPattern === 'MERCOSUL' || entry.plateFormat === 'MERCOSUL' || entry.plateFormat === 'mercosul'
+            ? 'MERCOSUL (FE-Schrift)'
+            : entry.fontPattern === 'ANTIGO_BRASIL' || entry.plateFormat === 'ANTIGO_BRASIL' || entry.plateFormat === 'antiga'
+            ? 'ANTIGO BRASIL (Mandatory)'
+            : 'NÃO IDENTIFICADO',
         'Posto / Graduação': entry.rankOrDoc,
         'Nome de Guerra': entry.warName || entry.driverName,
         'Nome Completo': entry.driverName,
@@ -402,8 +407,15 @@ export const HistoryExportView: React.FC<HistoryExportViewProps> = ({
 
                       {/* Placa */}
                       <td className="py-2.5 px-3 text-center">
-                        <div className="inline-block scale-90">
-                          <BrazilianPlateBadge plate={entry.plate} format={entry.plateFormat} size="sm" />
+                        <div className="inline-flex flex-col items-center gap-0.5">
+                          <div className="scale-90">
+                            <BrazilianPlateBadge plate={entry.plate} format={entry.plateFormat} size="sm" />
+                          </div>
+                          <span className="text-[8px] font-mono font-semibold text-slate-400">
+                            {entry.fontPattern === 'ANTIGO_BRASIL' || entry.plateFormat === 'ANTIGO_BRASIL' || entry.plateFormat === 'antiga'
+                              ? 'Antigo (Cinza)'
+                              : 'Mercosul (FE)'}
+                          </span>
                         </div>
                       </td>
 

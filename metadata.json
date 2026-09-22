@@ -1,6 +1,10 @@
 {
   "name": "Controle de Acesso APMG - Guarda do Quartel",
   "description": "Aplicativo mobile da Guarda do Quartel da Academia Policial Militar do Guatupê (APMG / PMPR) para leitura rápida de placas, registro fotográfico pericial com carimbo e Picture-in-Picture, cadastro por subunidades e exportação do Livro da Guarda.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

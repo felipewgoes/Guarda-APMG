@@ -46,7 +46,13 @@ export interface PopUpToastState {
   entryTime?: string;
 }
 
-export type PlateFormat = 'mercosul' | 'antiga' | 'outro';
+export type PlateFormat =
+  | 'MERCOSUL'
+  | 'ANTIGO_BRASIL'
+  | 'NAO_IDENTIFICADO'
+  | 'mercosul'
+  | 'antiga'
+  | 'outro';
 
 export type VehicleCategory = 
   | 'Carro' 
@@ -72,6 +78,8 @@ export interface VehicleEntry {
   id: string;
   plate: string;
   plateFormat: PlateFormat;
+  fontPattern?: 'MERCOSUL' | 'ANTIGO_BRASIL' | 'NAO_IDENTIFICADO';
+  readConfidence?: 'ALTA' | 'MEDIA' | 'BAIXA';
   vehicleType: VehicleCategory;
   brand: string;
   model: string;

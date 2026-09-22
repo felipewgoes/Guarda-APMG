@@ -300,22 +300,25 @@ export default function App() {
 
       {/* Main Workspace: 4 ABAS */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4">
-        {/* ABA 1: LEITURA RÁPIDA (Tela Inicial de Operação) */}
-        {activeTab === 'leitura_rapida' && (
-          <section id="aba-1-leitura-rapida" aria-label="Aba 1: Leitura Rápida">
-            <QuickScannerView
-              registeredVehicles={registeredVehicles}
-              currentSentry={currentSentry}
-              currentPost={currentPost}
-              onSaveEntry={handleSaveEntry}
-              onShowPopUp={(toast) => setCurrentToast(toast)}
-              onNavigateToTab={(tab, plate) => {
-                if (plate) setRedirectPrefillPlate(plate);
-                setActiveTab(tab);
-              }}
-            />
-          </section>
-        )}
+        {/* ABA 1: LEITURA RÁPIDA (Tela Inicial de Operação - Câmera Automática com Ciclo de Vida) */}
+        <section
+          id="aba-1-leitura-rapida"
+          aria-label="Aba 1: Leitura Rápida"
+          className={activeTab === 'leitura_rapida' ? 'block' : 'hidden'}
+        >
+          <QuickScannerView
+            isActive={activeTab === 'leitura_rapida'}
+            registeredVehicles={registeredVehicles}
+            currentSentry={currentSentry}
+            currentPost={currentPost}
+            onSaveEntry={handleSaveEntry}
+            onShowPopUp={(toast) => setCurrentToast(toast)}
+            onNavigateToTab={(tab, plate) => {
+              if (plate) setRedirectPrefillPlate(plate);
+              setActiveTab(tab);
+            }}
+          />
+        </section>
 
         {/* ABA 2: CADASTRO MILITAR */}
         {activeTab === 'cadastro_militar' && (
