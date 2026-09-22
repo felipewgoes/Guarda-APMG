@@ -1,27 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
-import { QuickScannerView } from './components/QuickScannerView';
-import { MilitaryRegistrationView } from './components/MilitaryRegistrationView';
-import { CivilRegistrationView } from './components/CivilRegistrationView';
-import { HistoryExportView } from './components/HistoryExportView';
+import { NavigationDrawer, ActiveModule, SubfunctionId } from './components/NavigationDrawer';
+import { ModulePortariaView } from './components/ModulePortariaView';
+import { ModuleCadastroView } from './components/ModuleCadastroView';
+import { ModuleGestaoView } from './components/ModuleGestaoView';
 import { BottomNavBar } from './components/BottomNavBar';
 import { MilitaryPopUpToast } from './components/MilitaryPopUpToast';
 import { PhotoModal } from './components/PhotoModal';
+import { PermissionsModal } from './components/PermissionsModal';
 import { VehicleEntry, RegisteredVehicle, AppTab, PopUpToastState } from './types';
 import { INITIAL_ENTRIES, INITIAL_REGISTERED_VEHICLES } from './data/mockVehicles';
 import { generateGuardCompositePhoto } from './utils/compositePhotoGenerator';
+import { downloadOrShareOfficialPdf } from './utils/officialPdfGenerator';
 
 export default function App() {
-  // Active tab state: 4 tabs as specified by the user
-  const [activeTab, setActiveTab] = useState<AppTab>('leitura_rapida');
+  // Estado dos 3 MÓDULOS PRINCIPAIS
+  const [activeModule, setActiveModule] = useState<ActiveModule>('modulo_portaria');
 
-  // Pre-filled plate for quick registration redirection
+  // Subfunção ativa / expandida alvo (ao clicar via Navigation Drawer)
+  const [targetSubfunction, setTargetSubfunction] = useState<SubfunctionId | undefined>('leitura_camera');
+
+  // Estado do Menu Lateral / Drawer
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+
+  // Modal de Permissões Nativas (Aberto na inicialização se ainda não concedidas)
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState<boolean>(() => {
+    try {
+      const permCamera = localStorage.getItem('apmg_perm_camera');
+      const permStorage = localStorage.getItem('apmg_perm_storage');
+      return !(permCamera === 'granted' && permStorage === 'granted');
+    } catch {
+      return true;
+    }
+  });
+
+  // Placa pré-preenchida para redirecionamento rápido ao cadastro
   const [redirectPrefillPlate, setRedirectPrefillPlate] = useState<string>('');
 
-  // Float Pop-up state (2.5s timer)
+  // Toast Flutuante Militar (2.5s)
   const [currentToast, setCurrentToast] = useState<PopUpToastState | null>(null);
 
-  // Vehicle entries list (Shift log) with persistent storage
+  // Lista de Entradas (Livro de Muro da Guarda)
   const [entries, setEntries] = useState<VehicleEntry[]>(() => {
     try {
       const saved = localStorage.getItem('quartel_vehicle_entries');
@@ -32,7 +51,7 @@ export default function App() {
     return INITIAL_ENTRIES;
   });
 
-  // Registered Military & Fleet database with persistence
+  // Frota e Efetivo Militar Cadastrado
   const [registeredVehicles, setRegisteredVehicles] = useState<RegisteredVehicle[]>(() => {
     try {
       const saved = localStorage.getItem('quartel_registered_vehicles');
@@ -43,7 +62,7 @@ export default function App() {
     return INITIAL_REGISTERED_VEHICLES;
   });
 
-  // Active Sentry and Guard Post
+  // Sentinela de Serviço e Posto da Guarda
   const [currentSentry, setCurrentSentry] = useState<string>(() => {
     return localStorage.getItem('quartel_sentry') || 'Cb. Moreira / Sd. Rocha';
   });
@@ -51,10 +70,10 @@ export default function App() {
     return localStorage.getItem('quartel_post') || 'Portão Principal (Guarda das Armas)';
   });
 
-  // Photo viewer modal
+  // Modal de visualização de foto pericial ampliada
   const [selectedPhotoEntry, setSelectedPhotoEntry] = useState<VehicleEntry | null>(null);
 
-  // Sync entries to local storage
+  // Sincronização com o localStorage
   useEffect(() => {
     try {
       localStorage.setItem('quartel_vehicle_entries', JSON.stringify(entries));
@@ -63,7 +82,6 @@ export default function App() {
     }
   }, [entries]);
 
-  // Sync registered fleet to local storage
   useEffect(() => {
     try {
       localStorage.setItem('quartel_registered_vehicles', JSON.stringify(registeredVehicles));
@@ -72,11 +90,10 @@ export default function App() {
     }
   }, [registeredVehicles]);
 
-  // Handle new entry recorded (via camera AI or manual entry)
+  // Salvar nova entrada
   const handleSaveEntry = (newEntry: VehicleEntry) => {
     setEntries((prev) => [newEntry, ...prev]);
 
-    // Async sync to server
     fetch('/api/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -89,7 +106,23 @@ export default function App() {
     fetch(`/api/entries/${id}`, { method: 'DELETE' }).catch((err) => console.warn(err));
   };
 
-  // ABA 2 Action: Save Military Vehicle to Base with APMG sub-units & composite photo
+  // Subfunção de Registro de Saída / Liberação de Pátio
+  const handleRegisterExit = (entryId: string, exitTime: string) => {
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === entryId
+          ? {
+              ...e,
+              exitTime,
+              status: 'saida_liberada',
+              notes: `${e.notes || ''} • Saída registrada às ${exitTime}`.trim(),
+            }
+          : e
+      )
+    );
+  };
+
+  // Salvar Cadastro de Militar da APMG ou Outra OPM
   const handleSaveMilitaryVehicle = async (
     newVeh: RegisteredVehicle,
     registerImmediateEntry?: boolean
@@ -97,7 +130,9 @@ export default function App() {
     setRegisteredVehicles((prev) => [newVeh, ...prev.filter((v) => v.plate !== newVeh.plate)]);
 
     const divFormatted = newVeh.division
-      ? (newVeh.division === 'Outra OPM' ? `${newVeh.otherOpm || 'Outra OPM'}` : `${newVeh.division} / APMG`)
+      ? newVeh.division === 'Outra OPM'
+        ? `${newVeh.otherOpm || 'Outra OPM'}`
+        : `${newVeh.division} / APMG`
       : 'APMG';
 
     if (registerImmediateEntry) {
@@ -105,7 +140,6 @@ export default function App() {
       const dateStr = now.toLocaleDateString('pt-BR');
       const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-      // Gera foto de registro da guarda composta (com carimbo e PiP do militar)
       let compositeUrl: string | undefined = undefined;
       try {
         compositeUrl = await generateGuardCompositePhoto({
@@ -130,6 +164,7 @@ export default function App() {
         id: `entry-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         plate: newVeh.plate,
         plateFormat: /^[A-Z]{3}[0-9][A-Z]/.test(newVeh.plate.replace('-', '')) ? 'mercosul' : 'antiga',
+        fontPattern: /^[A-Z]{3}[0-9][A-Z]/.test(newVeh.plate.replace('-', '')) ? 'MERCOSUL' : 'ANTIGO_BRASIL',
         vehicleType: newVeh.vehicleType,
         brand: newVeh.brand,
         model: newVeh.model,
@@ -158,7 +193,6 @@ export default function App() {
       handleSaveEntry(newEntry);
     }
 
-    // Trigger Green Pop-up notification with photo and 2.5s auto-dismiss
     setCurrentToast({
       id: `${Date.now()}`,
       type: 'green',
@@ -175,12 +209,12 @@ export default function App() {
       entryTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     });
 
-    // Return to quick scanning immediately for high operational agility
     setRedirectPrefillPlate('');
-    setActiveTab('leitura_rapida');
+    setActiveModule('modulo_portaria');
+    setTargetSubfunction('leitura_camera');
   };
 
-  // ABA 3 Action: Register Civil / Visitor Entry with Composite Photo
+  // Salvar Cadastro de Visitante & Civil
   const handleRegisterCivilEntry = async (newEntry: VehicleEntry) => {
     let compositeUrl: string | undefined = undefined;
     try {
@@ -209,7 +243,6 @@ export default function App() {
 
     handleSaveEntry(entryToSave);
 
-    // Trigger Green Pop-up notification with 2.5s dismiss
     setCurrentToast({
       id: `${Date.now()}`,
       type: 'green',
@@ -226,26 +259,42 @@ export default function App() {
       entryTime: newEntry.entryTimeFormatted,
     });
 
-    // Return to quick scanning immediately
     setRedirectPrefillPlate('');
-    setActiveTab('leitura_rapida');
+    setActiveModule('modulo_portaria');
+    setTargetSubfunction('leitura_camera');
   };
 
-  // Redirection when Red Pop-up is clicked or operator chooses to register
+  // Navegação disparada a partir do Alerta Vermelho ou botões de cadastro
   const handleRedirectToCadastroMilitar = (plate?: string) => {
-    if (plate) {
-      setRedirectPrefillPlate(plate);
-    }
+    if (plate) setRedirectPrefillPlate(plate);
     setCurrentToast(null);
-    setActiveTab('cadastro_militar');
+    setActiveModule('modulo_cadastro');
+    setTargetSubfunction('cadastro_militar');
   };
 
   const handleRedirectToCadastroCivil = (plate?: string) => {
-    if (plate) {
-      setRedirectPrefillPlate(plate);
-    }
+    if (plate) setRedirectPrefillPlate(plate);
     setCurrentToast(null);
-    setActiveTab('cadastro_civil');
+    setActiveModule('modulo_cadastro');
+    setTargetSubfunction('cadastro_civil');
+  };
+
+  // Navegação genérica compatível com AppTab
+  const handleNavigateToTab = (tab: AppTab, plate?: string) => {
+    if (plate) setRedirectPrefillPlate(plate);
+    if (tab === 'leitura_rapida') {
+      setActiveModule('modulo_portaria');
+      setTargetSubfunction('leitura_camera');
+    } else if (tab === 'cadastro_militar') {
+      setActiveModule('modulo_cadastro');
+      setTargetSubfunction('cadastro_militar');
+    } else if (tab === 'cadastro_civil') {
+      setActiveModule('modulo_cadastro');
+      setTargetSubfunction('cadastro_civil');
+    } else if (tab === 'historico_exportacao') {
+      setActiveModule('modulo_gestao');
+      setTargetSubfunction('livro_muro');
+    }
   };
 
   const handleChangeSentry = (sentry: string, post: string) => {
@@ -255,23 +304,40 @@ export default function App() {
     localStorage.setItem('quartel_post', post);
   };
 
-  // Trigger Excel export from header button
-  const handleExportExcelTrigger = () => {
-    if (activeTab !== 'historico_exportacao') {
-      setActiveTab('historico_exportacao');
-      setTimeout(() => {
-        const btn = document.getElementById('export-excel-btn');
-        if (btn) btn.click();
-      }, 150);
-    } else {
-      const btn = document.getElementById('export-excel-btn');
-      if (btn) btn.click();
+  // Exportação rápida de PDF do cabeçalho
+  const handleExportPdfOfficial = async () => {
+    try {
+      const today = new Date().toLocaleDateString('pt-BR');
+      const officer = localStorage.getItem('apmg_officer_on_duty') || 'Cap. QOPM Silva';
+      await downloadOrShareOfficialPdf({
+        entries,
+        shiftStartDateTime: `${today} - 07:00`,
+        shiftEndDateTime: `${today} - 19:00`,
+        guardPost: currentPost,
+        sentryName: currentSentry,
+        officerOnDuty: officer,
+      });
+    } catch (err: any) {
+      alert('Erro ao gerar relatório PDF oficial: ' + err.message);
     }
   };
 
+  // Exportação Excel rápida do cabeçalho
+  const handleExportExcelTrigger = () => {
+    setActiveModule('modulo_gestao');
+    setTargetSubfunction('livro_muro');
+    setTimeout(() => {
+      const btn = document.getElementById('export-excel-btn');
+      if (btn) btn.click();
+    }, 150);
+  };
+
+  // Contadores para o Navigation Drawer
+  const yardCount = entries.filter((e) => !e.exitTime).length;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-20 sm:pb-8 selection:bg-emerald-500/30 selection:text-emerald-200">
-      {/* 3s Auto-disappearing Floating Military Pop-up Toast (Green) or Alert (Red with direct buttons) */}
+      {/* Pop-up Flutuante Militar (2.5s) */}
       <MilitaryPopUpToast
         toast={currentToast}
         onDismiss={() => setCurrentToast(null)}
@@ -279,97 +345,125 @@ export default function App() {
         onSelectCivil={handleRedirectToCadastroCivil}
         onOpenManualInput={() => {
           setCurrentToast(null);
-          setActiveTab('leitura_rapida');
-          setTimeout(() => {
-            const manualBtn = document.getElementById('quick-manual-input-btn');
-            if (manualBtn) manualBtn.click();
-          }, 100);
+          setActiveModule('modulo_portaria');
+          setTargetSubfunction('lancamento_manual');
         }}
       />
 
-      {/* Top Header */}
+      {/* Menu Lateral Tático (Navigation Drawer / Dashboard Lateral) */}
+      <NavigationDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        activeModule={activeModule}
+        onSelectModule={(mod, sub) => {
+          setActiveModule(mod);
+          if (sub) setTargetSubfunction(sub);
+        }}
+        currentSentry={currentSentry}
+        currentPost={currentPost}
+        entriesCount={entries.length}
+        yardCount={yardCount}
+        alertsCount={3}
+        onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+      />
+
+      {/* Tela de Verificação e Solicitação de Permissões Nativas do Celular */}
+      <PermissionsModal
+        isOpen={isPermissionsModalOpen}
+        onAllGranted={() => setIsPermissionsModalOpen(false)}
+        onDismiss={() => setIsPermissionsModalOpen(false)}
+      />
+
+      {/* Cabeçalho Oficial Militar */}
       <Header
         entries={entries}
         currentSentry={currentSentry}
         currentPost={currentPost}
-        activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
+        activeModule={activeModule}
+        onSelectModule={(mod) => {
+          setActiveModule(mod);
+          setTargetSubfunction(undefined);
+        }}
+        onOpenDrawer={() => setIsDrawerOpen(true)}
         onChangeSentry={handleChangeSentry}
         onExportExcel={handleExportExcelTrigger}
+        onExportPdf={handleExportPdfOfficial}
       />
 
-      {/* Main Workspace: 4 ABAS */}
+      {/* Espaço Principal de Trabalho: EXATAMENTE OS 3 MÓDULOS PRINCIPAIS COM CARDS RETRÁTEIS */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4">
-        {/* ABA 1: LEITURA RÁPIDA (Tela Inicial de Operação - Câmera Automática com Ciclo de Vida) */}
-        <section
-          id="aba-1-leitura-rapida"
-          aria-label="Aba 1: Leitura Rápida"
-          className={activeTab === 'leitura_rapida' ? 'block' : 'hidden'}
-        >
-          <QuickScannerView
-            isActive={activeTab === 'leitura_rapida'}
-            registeredVehicles={registeredVehicles}
-            currentSentry={currentSentry}
-            currentPost={currentPost}
-            onSaveEntry={handleSaveEntry}
-            onShowPopUp={(toast) => setCurrentToast(toast)}
-            onNavigateToTab={(tab, plate) => {
-              if (plate) setRedirectPrefillPlate(plate);
-              setActiveTab(tab);
-            }}
-          />
-        </section>
-
-        {/* ABA 2: CADASTRO MILITAR */}
-        {activeTab === 'cadastro_militar' && (
-          <section id="aba-2-cadastro-militar" aria-label="Aba 2: Cadastro Militar">
-            <MilitaryRegistrationView
-              initialPlate={redirectPrefillPlate}
-              onSaveMilitaryVehicle={handleSaveMilitaryVehicle}
-              onCancel={() => {
-                setRedirectPrefillPlate('');
-                setActiveTab('leitura_rapida');
-              }}
+        {/* ========================================================
+            MÓDULO 1: "CONTROLE DE ACESSO (PORTARIA)"
+           ======================================================== */}
+        {activeModule === 'modulo_portaria' && (
+          <section id="modulo-1-portaria" aria-label="Módulo 1: Controle de Acesso (Portaria)">
+            <ModulePortariaView
+              isActive={activeModule === 'modulo_portaria'}
+              registeredVehicles={registeredVehicles}
+              currentSentry={currentSentry}
+              currentPost={currentPost}
+              entries={entries}
+              onSaveEntry={handleSaveEntry}
+              onShowPopUp={(toast) => setCurrentToast(toast)}
+              onNavigateToTab={handleNavigateToTab}
+              onRegisterExit={handleRegisterExit}
+              targetSubfunction={targetSubfunction}
             />
           </section>
         )}
 
-        {/* ABA 3: CADASTRO CIVIL */}
-        {activeTab === 'cadastro_civil' && (
-          <section id="aba-3-cadastro-civil" aria-label="Aba 3: Cadastro Civil">
-            <CivilRegistrationView
+        {/* ========================================================
+            MÓDULO 2: "CADASTRO & TRIAGEM DE EFETIVO/CIVIL"
+           ======================================================== */}
+        {activeModule === 'modulo_cadastro' && (
+          <section id="modulo-2-cadastro" aria-label="Módulo 2: Cadastro & Triagem de Efetivo/Civil">
+            <ModuleCadastroView
               initialPlate={redirectPrefillPlate}
               currentSentry={currentSentry}
               currentPost={currentPost}
+              onSaveMilitaryVehicle={handleSaveMilitaryVehicle}
               onRegisterCivilEntry={handleRegisterCivilEntry}
               onCancel={() => {
                 setRedirectPrefillPlate('');
-                setActiveTab('leitura_rapida');
+                setActiveModule('modulo_portaria');
+                setTargetSubfunction('leitura_camera');
               }}
+              targetSubfunction={targetSubfunction}
             />
           </section>
         )}
 
-        {/* ABA 4: HISTÓRICO & EXPORTAÇÃO */}
-        {activeTab === 'historico_exportacao' && (
-          <section id="aba-4-historico-exportacao" aria-label="Aba 4: Histórico & Exportação">
-            <HistoryExportView
+        {/* ========================================================
+            MÓDULO 3: "GESTÃO DO SERVIÇO & RELATÓRIOS"
+           ======================================================== */}
+        {activeModule === 'modulo_gestao' && (
+          <section id="modulo-3-gestao" aria-label="Módulo 3: Gestão do Serviço & Relatórios">
+            <ModuleGestaoView
               entries={entries}
+              currentSentry={currentSentry}
+              currentPost={currentPost}
               onSelectPhoto={(entry) => setSelectedPhotoEntry(entry)}
               onDeleteEntry={handleDeleteEntry}
+              onChangeSentry={handleChangeSentry}
+              onOpenPermissionsModal={() => setIsPermissionsModalOpen(true)}
+              targetSubfunction={targetSubfunction}
             />
           </section>
         )}
       </main>
 
-      {/* Mobile-First Bottom Navigation Bar with 4 Operational Tabs */}
+      {/* Barra de Navegação Inferior para Smartphones */}
       <BottomNavBar
-        activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
+        activeModule={activeModule}
+        onSelectModule={(mod) => {
+          setActiveModule(mod);
+          setTargetSubfunction(undefined);
+        }}
+        onOpenDrawer={() => setIsDrawerOpen(true)}
         entriesCount={entries.length}
       />
 
-      {/* Photo Preview Modal with Date/Time Watermark */}
+      {/* Modal de Exibição de Foto Pericial */}
       <PhotoModal
         entry={selectedPhotoEntry}
         onClose={() => setSelectedPhotoEntry(null)}

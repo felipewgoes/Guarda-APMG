@@ -101,7 +101,9 @@ export interface VehicleEntry {
   purpose: EntryPurpose;
   guardPost: string; // e.g. "Guarda das Armas - APMG"
   sentryName: string; // Sentinela de Serviço
-  status: 'autorizado' | 'alerta' | 'bloqueado';
+  status: 'autorizado' | 'alerta' | 'bloqueado' | 'saida_liberada' | 'visitante_aguardando';
+  exitTime?: string; // HH:mm ou HH:mm:ss quando baixado no pátio
+  ocrConfidence?: 'ALTA' | 'MEDIA' | 'BAIXA';
   notes?: string;
   createdAt: number;
 }

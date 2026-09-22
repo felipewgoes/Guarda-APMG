@@ -1,32 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Clock, Car, Users, Truck, UserCheck, Settings, FileSpreadsheet, Camera } from 'lucide-react';
-import { VehicleEntry, AppTab } from '../types';
+import {
+  Shield,
+  Clock,
+  Car,
+  Users,
+  Truck,
+  UserCheck,
+  Settings,
+  FileSpreadsheet,
+  FileText,
+  Camera,
+  Menu,
+  UserPlus,
+} from 'lucide-react';
+import { VehicleEntry } from '../types';
+import { ActiveModule } from './NavigationDrawer';
 
 interface HeaderProps {
   entries: VehicleEntry[];
   currentSentry: string;
   currentPost: string;
-  activeTab: AppTab;
-  onSelectTab: (tab: AppTab) => void;
+  activeModule: ActiveModule;
+  onSelectModule: (module: ActiveModule) => void;
+  onOpenDrawer: () => void;
   onChangeSentry: (sentry: string, post: string) => void;
   onExportExcel: () => void;
+  onExportPdf: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   entries,
   currentSentry,
   currentPost,
-  activeTab,
-  onSelectTab,
+  activeModule,
+  onSelectModule,
+  onOpenDrawer,
   onChangeSentry,
   onExportExcel,
+  onExportPdf,
 }) => {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isEditingSentry, setIsEditingSentry] = useState<boolean>(false);
   const [sentryInput, setSentryInput] = useState<string>(currentSentry);
   const [postInput, setPostInput] = useState<string>(currentPost);
 
-  // Real-time ticking clock
+  // Relógio militar sincronizado
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -40,38 +58,52 @@ export const Header: React.FC<HeaderProps> = ({
     setIsEditingSentry(false);
   };
 
-  // Metrics calculation
   const totalEntries = entries.length;
-  const militaryEntries = entries.filter((e) => e.driverType === 'militar').length;
-  const visitorsEntries = entries.filter((e) => e.driverType === 'visitante' || e.driverType === 'fornecedor').length;
 
   return (
-    <header className="border-b border-slate-800 bg-slate-950/95 backdrop-blur-md sticky top-0 z-30">
+    <header className="border-b border-[#1B365D] bg-slate-950/95 backdrop-blur-md sticky top-0 z-30 shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
         <div className="flex items-center justify-between gap-3">
-          {/* Brand & APMG Military Quartel Identity */}
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-emerald-950 border border-emerald-500/40 text-emerald-400 shadow-md">
-              <Shield className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-xs sm:text-sm font-black tracking-wide uppercase text-slate-100 font-mono-military">
-                  APMG • Guarda do Quartel
-                </h1>
-                <span className="rounded bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300 font-mono-military">
-                  PMPR
-                </span>
+          {/* Menu Lateral Tático & Identidade Oficial da APMG */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botão do Menu Lateral (Drawer) */}
+            <button
+              type="button"
+              id="tactical-menu-drawer-btn"
+              onClick={onOpenDrawer}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-gradient-to-r from-[#0F1E36] to-[#1B365D] hover:from-[#1B365D] hover:to-[#2A4D7A] border border-[#2A4D7A] text-slate-100 text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
+              title="Abrir Dashboard Lateral dos 3 Módulos"
+            >
+              <Menu className="h-4 w-4 text-[#D4AF37]" />
+              <span className="hidden sm:inline font-mono tracking-wider text-[11px] text-[#D4AF37]">
+                MENU TÁTICO
+              </span>
+            </button>
+
+            {/* Brasão & Título */}
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#0F1E36] border border-[#D4AF37]/50 text-[#D4AF37] shadow-md">
+                <Shield className="h-5 w-5" />
               </div>
-              <p className="text-[10px] text-slate-400 hidden sm:block">
-                Academia Policial Militar do Guatupê • Controle de Acesso e Portaria
-              </p>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-xs sm:text-sm font-black tracking-wide uppercase text-slate-100 font-mono-military">
+                    APMG • Guarda do Quartel
+                  </h1>
+                  <span className="rounded bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300 font-mono-military">
+                    PMPR
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 hidden sm:block">
+                  Academia Policial Militar do Guatupê • Controle de Acesso e Portaria
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Sentry on duty & Live Clock & Top Navigation */}
+          {/* HUD do Sentinela, Relógio e Ações Rápidas */}
           <div className="flex items-center gap-2">
-            {/* Live Clock HUD */}
+            {/* Relógio HUD */}
             <div className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-1.5 shadow-sm">
               <Clock className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
               <div className="font-mono-military text-right">
@@ -81,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Current Sentry Widget */}
+            {/* Widget do Sentinela */}
             <div className="relative">
               {!isEditingSentry ? (
                 <button
@@ -96,8 +128,8 @@ export const Header: React.FC<HeaderProps> = ({
                   title="Alterar sentinela de serviço ou posto"
                 >
                   <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
-                  <div className="max-w-[130px] sm:max-w-[170px] truncate">
-                    <div className="text-[9px] font-semibold uppercase text-slate-400 leading-tight">
+                  <div className="max-w-[110px] sm:max-w-[150px] truncate">
+                    <div className="text-[9px] font-semibold uppercase text-slate-400 leading-tight truncate">
                       {currentPost}
                     </div>
                     <div className="text-xs font-bold text-slate-200 truncate leading-tight">
@@ -145,12 +177,24 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            {/* Quick Export Excel trigger in header */}
+            {/* Botão de Exportação PDF Oficial */}
+            <button
+              id="header-export-pdf-btn"
+              type="button"
+              onClick={onExportPdf}
+              className="flex items-center gap-1.5 rounded-xl bg-blue-950/70 hover:bg-blue-900/80 border border-blue-500/40 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-blue-200 transition-colors shadow-sm cursor-pointer"
+              title="Gerar e Baixar Relatório Oficial do Turno em PDF"
+            >
+              <FileText className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">PDF Oficial</span>
+            </button>
+
+            {/* Botão de Exportação Excel */}
             <button
               id="header-export-excel-btn"
               type="button"
               onClick={onExportExcel}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-emerald-300 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/40 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-emerald-300 transition-colors shadow-sm cursor-pointer"
               title="Gerar e Baixar Relatório do Turno em Excel"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
@@ -159,58 +203,45 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Desktop / Tablet Segmented Tabs (also synced with mobile bottom bar) */}
+        {/* Segmented Modules Selector (Desktop & Tablet) */}
         <div className="hidden sm:flex items-center gap-2 mt-2.5 pt-2 border-t border-slate-900 overflow-x-auto">
           <button
             type="button"
-            onClick={() => onSelectTab('leitura_rapida')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'leitura_rapida'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            onClick={() => onSelectModule('modulo_portaria')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeModule === 'modulo_portaria'
+                ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800'
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Aba 1: Leitura Rápida (Câmera)</span>
+            <span>Módulo 1: Controle de Acesso (Portaria)</span>
           </button>
 
           <button
             type="button"
-            onClick={() => onSelectTab('cadastro_militar')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'cadastro_militar'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            onClick={() => onSelectModule('modulo_cadastro')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeModule === 'modulo_cadastro'
+                ? 'bg-blue-600 text-white shadow-md ring-1 ring-blue-400/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800'
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Aba 2: Cadastro Militar</span>
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Módulo 2: Cadastro & Triagem de Efetivo/Civil</span>
           </button>
 
           <button
             type="button"
-            onClick={() => onSelectTab('cadastro_civil')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'cadastro_civil'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Aba 3: Cadastro Civil</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab('historico_exportacao')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'historico_exportacao'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            onClick={() => onSelectModule('modulo_gestao')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeModule === 'modulo_gestao'
+                ? 'bg-amber-600 text-white shadow-md ring-1 ring-amber-400/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800'
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Aba 4: Histórico & Exportação ({totalEntries})</span>
+            <span>Módulo 3: Gestão do Serviço & Relatórios ({totalEntries})</span>
           </button>
         </div>
       </div>

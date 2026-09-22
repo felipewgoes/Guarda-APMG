@@ -1,41 +1,37 @@
 import React from 'react';
-import { Camera, Shield, Users, FileSpreadsheet } from 'lucide-react';
-import { AppTab } from '../types';
+import { Camera, UserPlus, FileSpreadsheet, Menu, Shield } from 'lucide-react';
+import { ActiveModule } from './NavigationDrawer';
 
 interface BottomNavBarProps {
-  activeTab: AppTab;
-  onSelectTab: (tab: AppTab) => void;
+  activeModule: ActiveModule;
+  onSelectModule: (module: ActiveModule) => void;
+  onOpenDrawer: () => void;
   entriesCount: number;
 }
 
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({
-  activeTab,
-  onSelectTab,
+  activeModule,
+  onSelectModule,
+  onOpenDrawer,
   entriesCount,
 }) => {
-  const tabs = [
+  const modules = [
     {
-      id: 'leitura_rapida' as AppTab,
-      label: 'Leitura Rápida',
-      subtitle: 'Aba 1 (Câmera)',
+      id: 'modulo_portaria' as ActiveModule,
+      label: 'Mód. 1: Portaria',
+      subtitle: 'Acesso',
       icon: Camera,
     },
     {
-      id: 'cadastro_militar' as AppTab,
-      label: 'Cad. Militar',
-      subtitle: 'Aba 2 (Efetivo)',
-      icon: Shield,
+      id: 'modulo_cadastro' as ActiveModule,
+      label: 'Mód. 2: Cadastro',
+      subtitle: 'Efetivo/Civil',
+      icon: UserPlus,
     },
     {
-      id: 'cadastro_civil' as AppTab,
-      label: 'Cad. Civil',
-      subtitle: 'Aba 3 (Visitante)',
-      icon: Users,
-    },
-    {
-      id: 'historico_exportacao' as AppTab,
-      label: 'Histórico & Excel',
-      subtitle: 'Aba 4 (Planilha)',
+      id: 'modulo_gestao' as ActiveModule,
+      label: 'Mód. 3: Gestão',
+      subtitle: 'Livro & PDF',
       icon: FileSpreadsheet,
       badge: entriesCount > 0 ? `${entriesCount}` : undefined,
     },
@@ -44,21 +40,21 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   return (
     <nav
       id="bottom-tab-bar"
-      aria-label="Navegação Operacional em 4 Abas"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800/90 backdrop-blur-xl pb-safe shadow-2xl"
+      aria-label="Navegação em 3 Módulos Principais"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-[#1B365D] backdrop-blur-xl pb-safe shadow-2xl"
     >
       <div className="max-w-2xl mx-auto px-2 py-1.5 flex items-center justify-around">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+        {modules.map((mod) => {
+          const Icon = mod.icon;
+          const isActive = activeModule === mod.id;
 
           return (
             <button
-              key={tab.id}
-              id={`tab-btn-${tab.id}`}
+              key={mod.id}
+              id={`tab-btn-${mod.id}`}
               type="button"
-              onClick={() => onSelectTab(tab.id)}
-              className={`flex-1 relative flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-150 active:scale-95 ${
+              onClick={() => onSelectModule(mod.id)}
+              className={`flex-1 relative flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-150 active:scale-95 cursor-pointer ${
                 isActive
                   ? 'text-emerald-400 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
@@ -81,20 +77,35 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   <Icon className="w-5 h-5" />
                 </div>
 
-                {tab.badge && (
+                {mod.badge && (
                   <span className="absolute -top-1 -right-2 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-mono font-bold text-slate-950">
-                    {tab.badge}
+                    {mod.badge}
                   </span>
                 )}
               </div>
 
               {/* Text label */}
-              <span className="text-[11px] font-mono-military tracking-tight mt-0.5 leading-tight text-center">
-                {tab.label}
+              <span className="text-[10px] sm:text-[11px] font-mono-military tracking-tight mt-0.5 leading-tight text-center">
+                {mod.label}
               </span>
             </button>
           );
         })}
+
+        {/* Botão de Menu Lateral / Gaveta */}
+        <button
+          type="button"
+          id="bottom-menu-drawer-btn"
+          onClick={onOpenDrawer}
+          className="flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-slate-400 hover:text-slate-200 transition-all cursor-pointer active:scale-95"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 border border-slate-700 text-slate-300">
+            <Menu className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] sm:text-[11px] font-mono-military tracking-tight mt-0.5 text-slate-400">
+            Menu
+          </span>
+        </button>
       </div>
     </nav>
   );
